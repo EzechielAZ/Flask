@@ -1,0 +1,354 @@
+class Message(db.Model):
+    __tablename__ = 'Messages'
+
+    # Identifiant unique pour chaque message (entier)
+    message_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    
+    # Identifiants des expéditeurs et destinataires sous forme de chaînes
+    sender_id = db.Column(db.String(255), db.ForeignKey('Users.user_id'), nullable=False)
+    receiver_id = db.Column(db.String(255), db.ForeignKey('Users.user_id'), nullable=False)
+    
+    # Identifiant de la conversation à laquelle le message appartient
+    conversation_id = db.Column(db.Integer, db.ForeignKey('Conversations.conversation_id'), nullable=False)
+    
+    # Contenu du message
+    message_content = db.Column(db.Text, nullable=True)  # Rendre le contenu du message facultatif pour les messages uniquement multimédias
+    
+    # URL du fichier multimédia (image, vidéo, etc.)
+    media_url = db.Column(db.String(255), nullable=True)  # Ce champ stocke le lien du fichier
+    
+    # Type de fichier multimédia (image, vidéo, etc.)
+    media_type = db.Column(db.Enum('image', 'video'), nullable=True)
+    
+    # Date d'envoi du message
+    sent_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    
+    # Date de lecture du message, initialement null
+    read_at = db.Column(db.DateTime, nullable=True)
+    
+    # Statut du message (envoyé, livré, lu)
+    status = db.Column(db.Enum('sent', 'delivered', 'read'), default='sent')
+    
+    # Réplique à un message spécifique (relation auto-référencée)
+    reply_to_id = db.Column(db.Integer, db.ForeignKey('Messages.message_id'), nullable=True)
+    reply_to = db.relationship('Message', remote_side=[message_id], backref='replies', lazy=True)
+
+    # Relations
+    sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_messages', lazy=True)
+    receiver = db.relationship('User', foreign_keys=[receiver_id], backref='received_messages', lazy=True)
+    conversation = db.relationship('Conversation', backref='messages', lazy=True)
+
+
+@bp.route('/get_user_conversations/<user_id>', methods=['GET'])
+def get_user_conversations(user_id):
+    # Trouver les conversations où l'utilisateur est impliqué en tant qu'expéditeur ou destinataire
+    conversations = db.session.query(MessageModel.conversation_id).filter(
+        (MessageModel.sender_id == user_id) | (MessageModel.receiver_id == user_id)
+    ).distinct().all()
+
+    conversation_list = []
+
+    for conv in conversations:
+        conversation_id = conv[0]
+
+        # Récupérer le dernier message de la conversation
+        last_message = MessageModel.query.filter_by(conversation_id=conversation_id).order_by(MessageModel.sent_at.desc()).first()
+
+        if last_message:
+            # Identifier l'autre utilisateur
+            other_user_id = db.session.query(MessageModel.sender_id).filter(
+                MessageModel.conversation_id == conversation_id,
+                MessageModel.sender_id != user_id
+            ).distinct().first()
+
+            # Vérifier si `other_user_id` est valide
+            if not other_user_id:
+                other_user_id = db.session.query(MessageModel.receiver_id).filter(
+                    MessageModel.conversation_id == conversation_id,
+                    MessageModel.receiver_id != user_id
+                ).distinct().first()
+
+            if not other_user_id:
+                continue
+
+            other_user_id = other_user_id[0]  # Extraire l'ID réel
+
+            # Récupérer l'autre utilisateur
+            other_user = User.query.filter_by(user_id=other_user_id).first()
+
+            # Calculer les messages non lus
+            unread_messages = MessageModel.query.filter_by(
+                conversation_id=conversation_id,
+                receiver_id=user_id,
+            ).filter(MessageModel.status != 'read').count()
+
+            # Construire le contenu du dernier message
+            last_message_content = {
+                'text': last_message.message_content,
+                'media_url': last_message.media_url,
+                'media_type': last_message.media_type,
+                'reply_to': None
+            }
+
+            # Ajouter les informations sur la réplique si applicable
+            if last_message.reply_to_id:
+                reply_message = MessageModel.query.filter_by(message_id=last_message.reply_to_id).first()
+                if reply_message:
+                    last_message_content['reply_to'] = {
+                        'message_id': reply_message.message_id,
+                        'text': reply_message.message_content,
+                        'media_url': reply_message.media_url,
+                        'media_type': reply_message.media_type
+                    }
+
+            # Ajouter les informations de la conversation à la liste
+            conversation_list.append({
+                'id': conversation_id,
+                'name': other_user.first_name if other_user else 'Unknown',  # Utilisateur inconnu si l'autre utilisateur n'existe pas
+                'photo': other_user.photo_url if other_user else None,  # Photo de profil de l'autre utilisateur
+                'lastMessage': last_message_content,
+                'time': last_message.sent_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'unread': unread_messages,
+                'otherUserId': other_user.user_id if other_user else None
+            })
+
+    return {'conversations': conversation_list}, 200
+
+
+@bp.route('/get_conversation_messages/<conversation_id>', methods=['GET'])
+def get_conversation_messages(conversation_id):
+    # Récupérer tous les messages de la conversation, triés par date d'envoi
+    messages = MessageModel.query.filter_by(conversation_id=conversation_id).order_by(MessageModel.sent_at).all()
+    
+    # Construire la liste des messages avec les nouveaux champs
+    message_list = []
+    for msg in messages:
+        message_data = {
+            'message_id': msg.message_id,
+            'sender_id': msg.sender_id,
+            'receiver_id': msg.receiver_id,
+            'message': msg.message_content,
+            'media_url': msg.media_url,  # URL du média associé au message
+            'media_type': msg.media_type,  # Type du média (image, vidéo, etc.)
+            'timestamp': msg.sent_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'status': msg.status  # Statut du message (envoyé, livré, lu)
+        }
+
+        # Si le message est une réplique, inclure les informations sur le message auquel il répond
+        if msg.reply_to_id:
+            reply_message = MessageModel.query.filter_by(message_id=msg.reply_to_id).first()
+            if reply_message:
+                message_data['reply_to'] = {
+                    'message_id': reply_message.message_id,
+                    'sender_id': reply_message.sender_id,
+                    'receiver_id': reply_message.receiver_id,
+                    'message': reply_message.message_content,
+                    'media_url': reply_message.media_url,
+                    'media_type': reply_message.media_type,
+                    'timestamp': reply_message.sent_at.strftime('%Y-%m-%d %H:%M:%S')
+                }
+            else:
+                message_data['reply_to'] = None
+        else:
+            message_data['reply_to'] = None
+
+        # Ajouter les données du message à la liste
+        message_list.append(message_data)
+
+    return {'messages': message_list}, 200
+
+
+
+import os
+from flask import current_app
+from werkzeug.utils import secure_filename
+
+@socketio.on('send_conversation_message')
+def handle_send_conversation_message(data):
+    sender_id = data['sender_id']
+    conversation_id = data['conversation_id']
+    message = data.get('message')  # Message texte
+    receiver_id = data['receiver_id']
+    media = data.get('media')  # Fichier multimédia (image, vidéo)
+    media_type = data.get('media_type')  # Type de média (image, vidéo, etc.)
+
+    # Vérifier si la conversation existe
+    conversation = Conversation.query.get(conversation_id)
+
+    # Si la conversation n'existe pas, la créer
+    if not conversation:
+        conversation = Conversation(conversation_id=conversation_id)
+        db.session.add(conversation)
+        db.session.commit()
+        print(f"New conversation {conversation_id} created.")
+
+    # Si un média est envoyé, le traiter
+    media_url = None
+    if media:
+        filename = secure_filename(media['filename'])  # Sécuriser le nom du fichier
+        media_path = os.path.join(current_app.config['MEDIA_UPLOAD_FOLDER'], filename)
+        
+        # Sauvegarder le fichier sur le serveur (ou autre stockage)
+        with open(media_path, 'wb') as f:
+            f.write(media['content'])
+
+        # Créer l'URL du fichier pour le renvoyer à l'utilisateur (cela dépend de votre configuration)
+        media_url = os.path.join(current_app.config['MEDIA_URL'], filename)
+
+    # Enregistrer le message dans la base de données
+    new_message = MessageModel(
+        sender_id=sender_id,
+        receiver_id=receiver_id,
+        conversation_id=conversation_id,
+        message_content=message,
+        media_url=media_url,
+        media_type=media_type
+    )
+    db.session.add(new_message)
+    db.session.commit()
+
+    # Envoyer le message à la salle de conversation
+    emit('receive_conversation_message', {
+        'sender_id': sender_id,
+        'message': message,
+        'media_url': media_url,  # Ajouter l'URL du média (si présent)
+        'media_type': media_type,  # Ajouter le type de média
+        'receiver_id': receiver_id,
+        'timestamp': new_message.sent_at.strftime('%Y-%m-%d %H:%M:%S')
+    }, room=conversation_id)
+
+    print(f"Message sent in conversation {conversation_id} by {sender_id}")
+
+
+
+
+Pour gérer l'envoi de messages multimédias dans ce code React (en particulier dans `sendMessage` et la réception des messages dans le `useEffect`), il vous suffit d'ajouter une gestion pour les fichiers multimédia, tels que des images, des vidéos, etc., tout en gardant l'option d'envoyer des messages texte.
+
+### Modifications nécessaires
+
+1. **Modification de `sendMessage` pour inclure des fichiers multimédias**
+   Vous pouvez permettre à l'utilisateur de joindre des fichiers en plus du texte. Cela pourrait être un fichier image ou vidéo sélectionné via un sélecteur de fichiers (par exemple, `ImagePicker` ou une bibliothèque similaire). Lors de l'envoi, vous devrez passer le fichier et son type dans l'objet `emit`.
+
+2. **Modification de la réception des messages pour gérer les fichiers multimédias**
+   Vous devrez mettre à jour le traitement des messages entrants pour afficher les fichiers multimédias (images, vidéos) si présents.
+
+Voici les modifications à apporter :
+
+### 1. **Modification de `sendMessage` pour inclure un fichier multimédia :**
+
+Si vous avez un champ où l'utilisateur peut télécharger un fichier (par exemple, une image ou une vidéo), voici comment vous pourriez l'envoyer au serveur :
+
+```javascript
+const sendMessage = () => {
+  if (inputText.trim() !== '' || selectedMedia) {  // Si un texte ou un fichier multimédia est présent
+    const newMessage = {
+      id: String(Date.now()),
+      text: inputText.trim(),
+      sender: 'me',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      status: 'sending',
+      replyTo: replyToMessage,
+      media: selectedMedia, // Ajoutez les données du fichier multimédia ici
+      media_type: selectedMedia ? selectedMedia.type : 'text', // Type de fichier (image, vidéo, etc.)
+    };
+
+    setMessages([newMessage, ...messages]);
+    setInputText('');
+    setReplyToMessage(null);
+    setSelectedMedia(null);  // Reset the media after sending
+
+    playSendSound();
+
+    socket.emit('send_conversation_message', {
+      sender_id: userID,
+      conversation_id: conversationId,
+      message: newMessage.text,
+      receiver_id: userId,
+      media: selectedMedia,  // Envoyer le fichier
+      media_type: newMessage.media_type,
+    });
+  }
+};
+```
+
+### 2. **Modification de la réception des messages pour gérer les fichiers multimédias :**
+
+Lors de la réception des messages, vous devez gérer le rendu du message en fonction de son type (`text`, `image`, `video`, etc.). Voici comment vous pouvez ajuster la réception des messages dans `useEffect` :
+
+```javascript
+useEffect(() => {
+  socket.on('receive_conversation_message', (data) => {
+    const newMessage = {
+      id: String(Date.now()),
+      text: data.message,
+      sender: data.sender_id === userID ? 'me' : 'other',
+      timestamp: new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      status: 'read',
+      receiver_id: userId,
+      media: data.media_url, // Ajoutez l'URL du média reçu
+      media_type: data.media_type, // Type de média (image, vidéo, etc.)
+    };
+
+    setMessages(prevMessages => [newMessage, ...prevMessages]);
+  });
+}, []);
+```
+
+### 3. **Afficher les fichiers multimédias dans la liste des messages :**
+
+Dans votre interface de rendu des messages, vous devrez vérifier si un message contient un fichier multimédia et afficher ce fichier. Voici un exemple de la façon dont vous pouvez faire cela dans votre composant de rendu des messages :
+
+```javascript
+const renderMessage = (message) => {
+  return (
+    <View key={message.id} style={{ marginBottom: 10 }}>
+      <Text style={{ fontWeight: message.sender === 'me' ? 'bold' : 'normal' }}>
+        {message.sender === 'me' ? 'You' : 'Other'}
+      </Text>
+      <Text>{message.timestamp}</Text>
+      {message.text && <Text>{message.text}</Text>}
+
+      {message.media && message.media_type === 'image' && (
+        <Image source={{ uri: message.media }} style={{ width: 200, height: 200 }} />
+      )}
+      {message.media && message.media_type === 'video' && (
+        <Video
+          source={{ uri: message.media }}
+          style={{ width: 200, height: 200 }}
+          controls={true}
+        />
+      )}
+    </View>
+  );
+};
+```
+
+### 4. **Gestion du sélecteur de fichiers multimédias :**
+
+Si vous avez une fonctionnalité permettant à l'utilisateur de sélectionner des images ou des vidéos, vous devrez gérer l'état `selectedMedia`. Cela peut être fait via une bibliothèque comme `expo-image-picker` ou `react-native-image-picker`. Voici un exemple avec `expo-image-picker` pour sélectionner une image ou une vidéo :
+
+```javascript
+import * as ImagePicker from 'expo-image-picker';
+
+const pickImage = async () => {
+  let result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.All,
+    allowsEditing: true,
+    aspect: [4, 3],
+    quality: 1,
+  });
+
+  if (!result.canceled) {
+    setSelectedMedia(result.assets[0]);
+  }
+};
+```
+
+### 5. **Variables d'état :**
+Ajoutez une variable d'état pour gérer le fichier sélectionné :
+
+```javascript
+const [selectedMedia, setSelectedMedia] = useState(null);
+```
+
+Cela vous permettra de gérer et d'envoyer des fichiers multimédias en plus des messages texte dans votre application React Native. Vous devrez également vous assurer que votre backend (Socket.IO et Flask) est prêt à accepter et à stocker les fichiers multimédias avant de les renvoyer aux autres utilisateurs.

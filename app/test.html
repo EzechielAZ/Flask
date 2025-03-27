@@ -1,0 +1,621 @@
+<html>
+
+<head>
+    <base href="/">
+    <meta charset="utf-8">
+    <title>Modern Property Details | Enhanced</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.js"></script>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        :root {
+            --primary: #006aff;
+            --text-dark: #2a2a37;
+            --text-light: #697787;
+            --background: #f7f8f9;
+            --white: #ffffff;
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            background: var(--background);
+            color: var(--text-dark);
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            background: var(--white);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .image-gallery {
+            position: relative;
+            height: 400px;
+            overflow: hidden;
+            touch-action: pan-x;
+        }
+
+        .image-wrapper {
+            display: flex;
+            transition: var(--transition);
+            height: 100%;
+        }
+
+        .main-image {
+            width: 100%;
+            min-width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: var(--transition);
+        }
+
+        .main-image:hover {
+            transform: scale(1.05);
+        }
+
+        .image-count {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            backdrop-filter: blur(4px);
+        }
+
+        .dots {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            backdrop-filter: blur(4px);
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .dot:hover {
+            transform: scale(1.2);
+        }
+
+        .dot.active {
+            background: white;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .quick-actions {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .quick-action {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .quick-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .content {
+            padding: 24px;
+        }
+
+        .price {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .price-change {
+            font-size: 14px;
+            color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .address {
+            color: var(--text-light);
+            margin-bottom: 20px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 32px;
+            margin-bottom: 24px;
+            color: var(--text-dark);
+            font-size: 16px;
+            background: var(--background);
+            padding: 16px;
+            border-radius: 12px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, #eee, transparent);
+            margin: 32px 0;
+        }
+
+        .action-buttons {
+            display: grid;
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-outline {
+            background: white;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 106, 255, 0.2);
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 20px;
+            margin-top: 24px;
+        }
+
+        .feature {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-light);
+            font-size: 15px;
+            padding: 12px;
+            background: var(--background);
+            border-radius: 8px;
+            transition: var(--transition);
+        }
+
+        .feature:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .map-section {
+            margin-top: 32px;
+        }
+
+        .map-section h3 {
+            margin-bottom: 20px;
+            font-size: 20px;
+            padding: 0 16px;
+        }
+
+        #map {
+            width: 100%;
+            height: 300px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .image-gallery {
+                height: 300px;
+            }
+
+            .content {
+                padding: 16px;
+            }
+
+            .stats {
+                flex-wrap: wrap;
+                gap: 16px;
+            }
+        }
+
+        .animate-fade {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            display: none;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .modal.active {
+            display: block;
+        }
+
+        .modal-content {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .modal-image {
+            width: 100%;
+            height: auto;
+            border-radius: 12px;
+        }
+
+        .close-modal {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.6s linear infinite;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1001;
+        }
+
+        @keyframes spin {
+            to {
+                transform: translate(-50%, -50%) rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container animate-fade" id="propertyDetails">
+        <!-- Le contenu sera injecté dynamiquement -->
+    </div>
+
+    <div class="modal">
+        <button class="close-modal">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+        </button>
+        <div class="modal-content">
+            <!-- Images will be dynamically added here -->
+        </div>
+    </div>
+    <div class="spinner" style="display: none;"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async function () {
+            // Get property ID from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const propertyId = urlParams.get('id');
+            const userId = urlParams.get('user_id');
+
+            if (!propertyId) {
+                console.error('No property ID provided');
+                return;
+            }
+
+            const spinner = document.querySelector('.spinner');
+
+            try {
+                spinner.style.display = 'block';
+
+                // Load property data
+                const response = await axios.get(`http://192.168.220.11:5000/?property/${propertyId}?user_id=${userId || ''}`);
+                const property = response.data;
+
+                if (!property) {
+                    throw new Error('Property not found');
+                }
+
+                // Build HTML with data
+                const propertyHtml = `
+              <div class="image-gallery">
+                <div class="image-wrapper">
+                  ${property.photos.map(photo => `
+                    <img class="main-image" src="${photo}" alt="${property.title}">
+                  `).join('')}
+                </div>
+                <div class="image-count">1/${property.photos.length}</div>
+                <div class="dots">
+                  ${property.photos.map((_, i) => `
+                    <div class="dot ${i === 0 ? 'active' : ''}"></div>
+                  `).join('')}
+                </div>
+                <div class="quick-actions">
+                  <button class="quick-action share-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 8v13H3V8"/>
+                      <path d="M1 3h22v5H1z"/>
+                      <path d="M10 12h4"/>
+                    </svg>
+                  </button>
+                  <button class="quick-action favorite-btn" data-liked="${property.hasLiked}">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="${property.hasLiked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+        
+              <div class="content">
+                <div class="price">
+                  €${property.price.toLocaleString()}
+                </div>
+                <div class="address">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                  </svg>
+                  ${property.address}
+                </div>
+                
+                <div class="stats">
+                  <div class="stat-item">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                      <polyline points="9 22 9 12 15 12 15 22"/>
+                    </svg>
+                    ${property.bedrooms} chambres
+                  </div>
+                  <div class="stat-item">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M5 8h14"/>
+                      <path d="M5 8a2 2 0 1 1 0-4h14a2 2 0 1 1 0 4"/>
+                      <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/>
+                    </svg>
+                    ${property.bathrooms} salles de bain
+                  </div>
+                  <div class="stat-item">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    </svg>
+                    ${property.area} m²
+                  </div>
+                </div>
+        
+                <div class="description">
+                  <h3>Description</h3>
+                  <p>${property.description}</p>
+                </div>
+        
+                <div class="map-section">
+                  <h3>Localisation</h3>
+                  <div id="map"></div>
+                </div>
+              </div>
+            `;
+
+                document.getElementById('propertyDetails').innerHTML = propertyHtml;
+
+                // Initialize map
+                mapboxgl.accessToken = 'pk.eyJ1IjoieW91cl91c2VybmFtZSIsImEiOiJ5b3VyX3Rva2VuIn0.1234567890';
+                const map = new mapboxgl.Map({
+                    container: 'map',
+                    style: 'mapbox://styles/mapbox/streets-v11',
+                    center: [property.longitude, property.latitude],
+                    zoom: 15
+                });
+
+                new mapboxgl.Marker()
+                    .setLngLat([property.longitude, property.latitude])
+                    .addTo(map);
+
+                // Initialize image slider
+                const imageWrapper = document.querySelector('.image-wrapper');
+                const images = document.querySelectorAll('.main-image');
+                const dots = document.querySelectorAll('.dot');
+                let currentImage = 0;
+                let startX = 0;
+                let currentX = 0;
+
+                if (imageWrapper && images.length > 0) {
+                    imageWrapper.style.width = `${images.length * 100}%`;
+
+                    function updateSlide(animate = true) {
+                        const translation = -currentImage * (100 / images.length);
+                        imageWrapper.style.transition = animate ? 'transform 0.3s ease' : 'none';
+                        imageWrapper.style.transform = `translateX(${translation}%)`;
+
+                        dots.forEach((dot, index) => {
+                            dot.classList.toggle('active', index === currentImage);
+                        });
+
+                        document.querySelector('.image-count').textContent =
+                            `${currentImage + 1}/${images.length}`;
+                    }
+
+                    // Touch events
+                    imageWrapper.addEventListener('touchstart', e => {
+                        startX = e.touches[0].clientX;
+                        currentX = startX;
+                        imageWrapper.style.transition = 'none';
+                    });
+
+                    imageWrapper.addEventListener('touchmove', e => {
+                        currentX = e.touches[0].clientX;
+                        const diff = startX - currentX;
+                        const percentage = (diff / window.innerWidth) * 100;
+                        const translateX = -(currentImage * (100 / images.length)) - percentage;
+
+                        if (currentImage === 0 && diff < 0 ||
+                            currentImage === images.length - 1 && diff > 0) {
+                            imageWrapper.style.transform = `translateX(${translateX * 0.3}%)`;
+                        } else {
+                            imageWrapper.style.transform = `translateX(${translateX}%)`;
+                        }
+                    });
+
+                    imageWrapper.addEventListener('touchend', () => {
+                        const diff = startX - currentX;
+                        const threshold = window.innerWidth * 0.2;
+
+                        if (Math.abs(diff) > threshold) {
+                            if (diff > 0 && currentImage < images.length - 1) {
+                                currentImage++;
+                            } else if (diff < 0 && currentImage > 0) {
+                                currentImage--;
+                            }
+                        }
+
+                        updateSlide(true);
+                    });
+
+                    // Dot navigation
+                    dots.forEach((dot, index) => {
+                        dot.addEventListener('click', () => {
+                            currentImage = index;
+                            updateSlide();
+                        });
+                    });
+
+                    // Modal functionality
+                    const modal = document.querySelector('.modal');
+                    const modalContent = document.querySelector('.modal-content');
+                    const closeModal = document.querySelector('.close-modal');
+
+                    images.forEach(img => {
+                        img.addEventListener('click', () => {
+                            modal.classList.add('active');
+                            modalContent.innerHTML = property.photos
+                                .map(src => `<img class="modal-image animate-fade" src="${src}" alt="${property.title}">`)
+                                .join('');
+                        });
+                    });
+
+                    closeModal.addEventListener('click', () => {
+                        modal.classList.remove('active');
+                    });
+
+                    modal.addEventListener('click', e => {
+                        if (e.target === modal) {
+                            modal.classList.remove('active');
+                        }
+                    });
+
+                    document.addEventListener('keydown', e => {
+                        if (e.key === 'Escape' && modal.classList.contains('active')) {
+                            modal.classList.remove('active');
+                        }
+                    });
+                }
+
+            } catch (error) {
+                console.error('Error loading property details:', error);
+                document.getElementById('propertyDetails').innerHTML =
+                    '<div class="error">Error loading property details</div>';
+            } finally {
+                spinner.style.display = 'none';
+            }
+        });
+    </script>
+
+</body>
+
+</html>
