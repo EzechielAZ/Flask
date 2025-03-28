@@ -1,1 +1,31 @@
- gunicorn
+# Flask et ses extensions
+Flask==3.0.0
+Flask-RESTful==0.3.10
+Flask-CORS==4.0.0
+Flask-Mail==0.9.1
+Flask-SQLAlchemy==3.1.1
+Flask-Migrate==4.0.4
+Flask-WTF==1.2.1
+
+# Serveur WSGI pour la production
+gunicorn==21.2.0
+
+# Connecteur MySQL
+mysql-connector-python==8.3.0
+
+# Outils utiles
+python-dotenv==1.0.1  # Chargement des variables d'environnement
+requests==2.31.0  # Requêtes HTTP
+bcrypt==4.1.2  # Hashing des mots de passe
+pandas==2.2.1  # Manipulation de données (si nécessaire)
+numpy==1.26.4  # Calculs numériques
+
+# Sécurité
+cryptography==42.0.5
+itsdangerous==2.1.2
+
+# WebSockets (si utilisé)
+flask-socketio==5.3.6
+eventlet==0.33.3  # Nécessaire pour Flask-SocketIO
+
+# Ajoutez ici toutes les autres dépendances spécifiques à votre projet...
