@@ -1,3 +1,4 @@
+import os
 from flask import Flask
 from flask_mail import Mail
 from flask_migrate import Migrate
@@ -16,11 +17,16 @@ app.config.from_object(Config)
 # Initialiser mail avec l'application
 mail.init_app(app)
 
-# Configuration de la clé secrète
-app.secret_key = 'b@L$}pX>#fW3&9JHqTzY*8M^v?6RdPzKsUnw5Bm4!CgNr$A'
+# 🔒 Sécuriser la clé secrète
+app.secret_key = os.environ.get('SECRET_KEY')
+if not app.secret_key:
+    raise ValueError("SECRET_KEY est obligatoire. Définissez-le dans vos variables d'environnement.")
 
-# Configuration de la base de données
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:Forlike10#!@localhost/beninestate'
+# 🔥 Utiliser la base de données fournie par Render
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+if not app.config['SQLALCHEMY_DATABASE_URI']:
+    raise ValueError("DATABASE_URL est obligatoire. Ajoutez-la dans vos variables d'environnement.")
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialiser la base de données
@@ -38,6 +44,10 @@ socketio.init_app(app)
 # Initialiser les routes
 init_routes(app)
 
+# Déterminer le mode debug
+debug_mode = os.environ.get("FLASK_DEBUG", "False").lower() in ("true", "1")
+
 # Point d'entrée principal pour lancer l'application
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    port = int(os.environ.get("PORT", 5000))  # 🔥 Récupérer le port fourni par Render
+    socketio.run(app, host='0.0.0.0', port=port, debug=debug_mode)
