@@ -1,31 +1,103 @@
-# Flask et ses extensions
-Flask==3.0.0
-Flask-RESTful==0.3.10
-Flask-CORS==4.0.0
-Flask-Mail==0.9.1
-Flask-SQLAlchemy==3.1.1
-Flask-Migrate==4.0.4
-Flask-WTF==1.2.1
-
 # Serveur WSGI pour la production
 gunicorn==21.2.0
-
-# Connecteur MySQL
-mysql-connector-python==8.3.0
-
-# Outils utiles
-python-dotenv==1.0.1  # Chargement des variables d'environnement
-requests==2.31.0  # Requêtes HTTP
-bcrypt==4.1.2  # Hashing des mots de passe
-pandas==2.2.1  # Manipulation de données (si nécessaire)
-numpy==1.26.4  # Calculs numériques
-
-# Sécurité
-cryptography==42.0.5
-itsdangerous==2.1.2
-
-# WebSockets (si utilisé)
-flask-socketio==5.3.6
-eventlet==0.33.3  # Nécessaire pour Flask-SocketIO
-
-# Ajoutez ici toutes les autres dépendances spécifiques à votre projet...
+alembic==1.13.2
+annotated-types==0.7.0
+bidict==0.23.1
+blinker==1.8.2
+blis==1.0.1
+catalogue==2.0.10
+certifi==2024.8.30
+charset-normalizer==3.3.2
+click==8.1.7
+cloudpathlib==0.19.0
+colorama==0.4.6
+confection==0.1.5
+contourpy==1.3.1
+cycler==0.12.1
+cymem==2.0.8
+en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl#sha256=1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf8928f7c1a0fb85
+et_xmlfile==2.0.0
+filelock==3.16.1
+Flask==3.0.3
+Flask-Cors==5.0.0
+Flask-Mail==0.10.0
+Flask-Migrate==4.0.7
+Flask-SocketIO==5.3.6
+Flask-SQLAlchemy==3.1.1
+fonttools==4.55.3
+fpdf==1.7.2
+fsspec==2024.9.0
+fuzzywuzzy==0.18.0
+greenlet==3.0.3
+h11==0.14.0
+huggingface-hub==0.25.1
+idna==3.10
+itsdangerous==2.2.0
+Jinja2==3.1.4
+joblib==1.4.2
+kiwisolver==1.4.8
+langcodes==3.4.1
+language_data==1.2.0
+Mako==1.3.5
+marisa-trie==1.2.0
+markdown-it-py==3.0.0
+MarkupSafe==2.1.5
+matplotlib==3.10.0
+mdurl==0.1.2
+mpmath==1.3.0
+murmurhash==1.0.10
+mysqlclient==2.2.4
+networkx==3.3
+numpy==2.0.2
+openpyxl==3.1.5
+packaging==24.1
+pandas==2.2.3
+patsy==1.0.1
+pillow==10.4.0
+preshed==3.0.9
+pydantic==2.9.2
+pydantic_core==2.23.4
+Pygments==2.18.0
+pyparsing==3.2.0
+python-dateutil==2.9.0.post0
+python-engineio==4.9.1
+python-socketio==5.11.3
+pytz==2024.2
+PyYAML==6.0.2
+qrcode==8.0
+regex==2024.9.11
+requests==2.32.3
+rich==13.9.2
+safetensors==0.4.5
+scikit-learn==1.5.2
+scipy==1.14.1
+seaborn==0.13.2
+sentence-transformers==3.1.1
+setuptools==75.1.0
+shellingham==1.5.4
+simple-websocket==1.0.0
+six==1.17.0
+smart-open==7.0.5
+spacy==3.8.2
+spacy-legacy==3.0.12
+spacy-loggers==1.0.5
+SQLAlchemy==2.0.32
+srsly==2.4.8
+statsmodels==0.14.4
+sympy==1.13.3
+tabulate==0.9.0
+thinc==8.3.2
+threadpoolctl==3.5.0
+tokenizers==0.20.0
+torch==2.4.1
+tqdm==4.66.5
+transformers==4.45.1
+typer==0.12.5
+typing_extensions==4.12.2
+tzdata==2024.2
+urllib3==2.2.3
+wasabi==1.1.3
+weasel==0.4.1
+Werkzeug==3.0.3
+wrapt==1.16.0
+wsproto==1.2.0
